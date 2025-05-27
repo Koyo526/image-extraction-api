@@ -3,7 +3,7 @@ from fastapi import APIRouter, UploadFile, File, Form
 router = APIRouter()
 
 @router.post("/upload")
-async def upload_item_image(
+def upload_item_image(
     session_id: str = Form(...),
     user_token: str = Form(...),
     image: UploadFile = File(...)
