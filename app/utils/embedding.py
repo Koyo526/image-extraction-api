@@ -139,9 +139,10 @@ def load_dataset_and_embeddings():
                 vector = compute_embedding(image)
                 cursor.execute("INSERT INTO embeddings (image_url, embedding) VALUES (?, ?)",
                                (url, json.dumps(vector.tolist())))
-                conn.commit()
                 print(f"{url} のembeddingを計算し、DBに保存しました。")
         embeddings_list.append(vector)
+
+    conn.commit()  # Commit all changes after processing all images
     conn.close()
 
     # 全画像間の類似度を計算し、各画像の平均類似度が平均-2σより低いものを外れ値として除去
