@@ -1,3 +1,4 @@
 #.envファイルを無視する
 .env
 *.pyc
+**/__pycache__
