@@ -31,10 +31,10 @@ def root():
 def health_check():
     return {"status": "healthy"}
 
-app.include_router(upload.router, prefix="/upload", tags=["upload"])
-app.include_router(check_gpt.router, prefix="/gpt", tags=["gpt"])
-app.include_router(check_vision_gpt.router, prefix="/vision", tags=["vision"])
-app.include_router(coordinate_response.router, prefix="/coordinate", tags=["coordinate"])
-app.include_router(segment.router, prefix="/segment", tags=["segment"])
-app.include_router(search_my_fashion_api.router, prefix="/search-my-fashion-api", tags=["search-my-fashion-api"])
+app.include_router(upload.router, tags=["upload"])
+app.include_router(check_gpt.router, tags=["gpt"])
+app.include_router(check_vision_gpt.router, tags=["vision"])
+app.include_router(coordinate_response.router, tags=["coordinate"])
+app.include_router(segment.router, tags=["segment"])
+app.include_router(search_my_fashion_api.router, tags=["search-my-fashion-api"])
 
