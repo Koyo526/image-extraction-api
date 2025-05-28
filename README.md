@@ -21,3 +21,6 @@ bash script/restert.sh
 ```
 bash script/down.sh
 ```
+
+### 注意
+`.env`をリポジトリルートに作成し,`OPENAI_API_KEY`を設定すること
