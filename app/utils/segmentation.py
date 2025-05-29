@@ -1,6 +1,7 @@
-from pathlib import Path
 import time
 from typing import List, Tuple, Dict
+import base64
+import io
 
 import numpy as np
 import torch
@@ -47,29 +48,26 @@ def create_binary_mask(mask: np.ndarray, id_list: List[int]) -> np.ndarray:
     return binary * 255
 
 
-def save_png_with_alpha(
+# 全身画像からアイテムのピクセルだけをくり抜き、正方形の PNG 画像を生成する
+def create_png_with_alpha(
     img: Image.Image,
-    alpha_mask: np.ndarray,
-    out_path: Path
-) -> None:
+    alpha_mask: np.ndarray
+) -> Image.Image:
     """
     ① 元画像とアルファマスクを合成して RGBA 画像を作成
     ② アルファマスク領域のバウンディングボックスでクロップ
     ③ 正方形キャンバスを透過背景で作成し、クロップ画像を中央に配置
     ④ OUTPUT_SIZE×OUTPUT_SIZE に高品質リサイズ
-    ⑤ 透過 PNG として保存
 
     Args:
         img (Image.Image):
             元の RGB 画像。
         alpha_mask (np.ndarray):
             アルファチャンネル用マスク（0〜255 の二値配列）。
-        out_path (Path):
-            出力先のファイルパス。存在しないディレクトリは自動生成しないので、
-            呼び出し前に `out_path.parent.mkdir(..., exist_ok=True)` などで準備してください。
 
     Returns:
-        None
+        square (Image.Image):
+            OUTPUT_SIZE×OUTPUT_SIZE の正方形画像。
     """
     # ① RGBA 合成
     rgba = img.convert("RGBA")
@@ -95,8 +93,7 @@ def save_png_with_alpha(
     # ⑤ 高品質リサンプルで指定サイズにリサイズ
     square = square.resize((OUTPUT_SIZE, OUTPUT_SIZE), resample=Image.LANCZOS)
 
-    # 保存
-    square.save(out_path)
+    return square
 
 
 def load_model(use_cpu: bool) -> Tuple[torch.device, SegformerImageProcessor, AutoModelForSemanticSegmentation]:
@@ -124,67 +121,75 @@ def load_model(use_cpu: bool) -> Tuple[torch.device, SegformerImageProcessor, Au
 
 
 def run_batch_segmentation(
-    items: List[Item],
+    img_base64: str
     processor: SegformerImageProcessor,
     model: AutoModelForSemanticSegmentation,
-) -> List[Result]:
+) -> SegmentationResult:
     """
     画像リストに対してトップスとボトムスのセグメンテーションを一括実行し、結果を返す。
 
     Args:
-        items (List[Item]): セグメンテーション対象のアイテムリスト。
+        img_base64 (str): 全身画像のBase64エンコード文字列。
         processor (SegformerImageProcessor): 前処理プロセッサ。
         model (AutoModelForSemanticSegmentation): セグメンテーション用モデル。
 
     Returns:
-        List[Result]: セグメンテーション結果を格納した Result オブジェクトのリスト。
+        SegmentationResult: トップスとボトムスのセグメンテーション結果を含むデータクラス
     """
-    results: List[Result] = []
+    start_time = time.time()
 
-    for item in items:
-        start_time = time.time()
+    # 画像を読み込み RGB に変換
+    decoded_data = base64.b64decode(img_base64)
+    image_stream = io.BytesIO(decoded_data)
+    img = Image.open(image_stream).convert("RGB")
 
-        # 画像を読み込み RGB に変換
-        img = Image.open(item.img_path).convert("RGB")
+    # モデル入力の準備
+    inputs = processor(images=img, return_tensors="pt").to(model.device)
 
-        # モデル入力の準備
-        inputs = processor(images=img, return_tensors="pt").to(model.device)
+    # 推論実行
+    with torch.inference_mode():
+        logits = model(**inputs).logits
 
-        # 推論実行
-        with torch.inference_mode():
-            logits = model(**inputs).logits
+    # 出力サイズを元画像サイズに合わせて補間
+    seg = F.interpolate(
+        logits,
+        size=img.size[::-1],
+        mode="bilinear",
+        align_corners=False
+    )
 
-        # 出力サイズを元画像サイズに合わせて補間
-        seg = F.interpolate(
-            logits,
-            size=img.size[::-1],
-            mode="bilinear",
-            align_corners=False
-        )
+    # ラベルごとの最大値を持つインデックスを取得
+    mask = seg.argmax(dim=1)[0].cpu().numpy()
 
-        # ラベルごとの最大値を持つインデックスを取得
-        mask = seg.argmax(dim=1)[0].cpu().numpy()
+    # 各パートごとにマスクを生成し、検出有無を判定
+    # [tops]
+    tops_alpha = create_binary_mask(mask, TOP_IDS)
+    tops_detected = bool(tops_alpha.max() > 0)
+    # 検出できたなら結果を格納
+    if tops_detected:
+        tops_img = create_png_with_alpha(img, tops_alpha)
+        # TODO: S3へ画像をアップロードし、トップス画像のURLを生成する。tops_image_url へURLを格納する。
+        # 例: tops_image_url = upload_to_s3(tops_img, filename="tops.png")
+    # 検出に失敗したならNoneを格納
+    else:
+        tops_image_url = None
 
-        parts: Dict[str, PartResult] = {}
-        # 各パートごとにマスクを生成し、検出有無を判定
-        for part_name, ids in [("tops", TOP_IDS), ("bottoms", BOTTOM_IDS)]:
-            alpha = create_binary_mask(mask, ids)
-            detected = bool(alpha.max() > 0)
+    # [bottoms]
+    bottoms_alpha = create_binary_mask(mask, BOTTOM_IDS)
+    bottoms_detected = bool(bottoms_alpha.max() > 0)
+    if bottoms_detected:
+        bottoms_img = create_png_with_alpha(img, bottoms_alpha)
+        # TODO: S3へ画像をアップロードし、ボトムス画像のURLを生成する。bottoms_image_url へURLを格納する。
+        # 例: bottoms_image_url = upload_to_s3(bottoms_img, filename="tops.png")
+    else:
+        bottoms_image_url = None
 
-            parts[part_name] = PartResult(detected=detected)
+    runtime_sec = round(time.time() - start_time, 3)
 
-        # ステータス判定と結果オブジェクト生成
-        status = "success" if any(p.detected for p in parts.values()) else "skipped"
-        runtime_sec = round(time.time() - start_time, 3)
+    segmentationResult = SegmentationResult(
+        tops_image_url = tops_image_url,
+        bottoms_image_url = bottoms_image_url,
+        runtime_sec = runtime_sec
+    )
 
-        results.append(
-            Result(
-                filename=item.filename or item.img_path.name,
-                img_path=str(item.img_path),
-                status=status,
-                parts=parts,
-                runtime_sec=runtime_sec,
-            )
-        )
-
-    return results
+    return segmentationResult

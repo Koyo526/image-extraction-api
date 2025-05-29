@@ -8,10 +8,10 @@ class Item:
     セグメンテーション対象の画像アイテムを表すデータクラス。
 
     Attributes:
-        img_path (Path): 処理対象の画像ファイルパス。
+        img_base64 (str): 画像データをBase64エンコードした文字列
         filename (Optional[str]): 保存時に用いるファイル名。未指定の場合は元ファイル名を使用。
     """
-    img_path: Path
+    img_base64: str
     filename: Optional[str] = None
 
 @dataclass
@@ -25,21 +25,17 @@ class PartResult:
     detected: bool
 
 @dataclass
-class Result:
+class SegmentationResult:
     """
     セグメンテーション処理結果を表すデータクラス。
 
     Attributes:
-        filename (str): 結果保存時に用いるファイル名。
-        img_path (str): 入力画像のパス。
-        status (str): 処理ステータス ('success' or 'skipped')。
-        parts (Dict[str, PartResult]): パーツ名をキーとする PartResult の辞書。
+        tops_img_url (Optional[str]): トップスの画像URL。検出されなかった場合はNone。
+        bottoms_img_url (Optional[str]): ボトムスの画像URL。検出されなかった場合はNone。
         runtime_sec (float): 推論に要した時間（秒）。
     """
-    filename: str
-    img_path: str
-    status: str
-    parts: Dict[str, PartResult]
+    tops_img_url: Optional[str] = None
+    bottoms_img_url: Optional[str] = None
     runtime_sec: float
 
     def to_dict(self) -> dict:
@@ -50,8 +46,6 @@ class Result:
             dict: JSONシリアライズ可能な辞書。
         """
         return {
-            "filename": self.filename,
-            "img_path": self.img_path,
             "status": self.status,
             "parts": {k: v.__dict__ for k, v in self.parts.items()},
             "runtime_sec": self.runtime_sec,

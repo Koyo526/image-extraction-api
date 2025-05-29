@@ -15,8 +15,7 @@ class SegmentRequest(BaseModel):
     """
     セグメンテーション要求データモデル。
     """
-    img_paths: List[Path] = Field(..., description="解析対象の画像ファイルパスリスト")
-    out_dir: Optional[Path] = Field(Path("outputs/segmented"), description="透過PNG保存先ディレクトリ")
+    img_base64: str
     use_cpu: bool = Field(False, description="CPUを強制使用する場合は True")
 
 router = APIRouter()
@@ -32,11 +31,8 @@ def segment(request: SegmentRequest) -> List[Result]:
     Returns:
         List[Result]: セグメンテーション結果のリスト。
     """
-    logging.info("Received segment request for %d images", len(request.img_paths))
-    # Pydanticモデル -> dataclass へ変換
-    items = [Item(img_path=p, filename=None) for p in request.img_paths]
     # セグメンテーション実行
-    results = run_batch_segmentation(items, processor, model, request.out_dir)
+    results = run_batch_segmentation(request.img_base64, processor, model, request.out_dir)
     # 結果をファイルに保存
     save_results(results, Path("outputs/api_results.json"))
     return results
