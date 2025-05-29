@@ -5,7 +5,6 @@ from pathlib import Path
 import logging
 
 from utils.segmentation import load_model, run_batch_segmentation
-from utils.file_io import save_results
 from utils.models import Item, SegmentationResult
 
 # アプリ起動時にモデルをロード
@@ -48,6 +47,6 @@ def segment(request: SegmentRequest) -> SegmentationResult:
         List[Result]: セグメンテーション結果のリスト。
     """
     # セグメンテーション実行
-    segmentationResult = run_batch_segmentation(request.img_base64, processor, model, request.out_dir)
+    segmentationResult = run_batch_segmentation(request.img_base64, processor, model)
     
     return segmentationResult

@@ -2,7 +2,8 @@ from pathlib import Path
 import json
 from typing import List
 
-from utils.models import Item, Result
+# from utils.models import Item, Result
+from utils.models import Item
 
 
 def load_items(path: Path) -> List[Item]:
@@ -26,16 +27,16 @@ def load_items(path: Path) -> List[Item]:
     return items
 
 
-def save_results(results: List[Result], path: Path) -> None:
-    """
-    セグメンテーション結果(Result)のリストをJSON形式で保存する。
+# def save_results(results: List[Result], path: Path) -> None:
+#     """
+#     セグメンテーション結果(Result)のリストをJSON形式で保存する。
 
-    Args:
-        results (List[Result]): 保存対象のResultオブジェクトのリスト。
-        path (Path): 保存先JSONファイルへのパス。
-    """
-    # 保存先ディレクトリを作成
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # 辞書形式に変換してJSONを出力
-    with path.open("w", encoding="utf-8") as f:
-        json.dump([r.to_dict() for r in results], f, indent=2, ensure_ascii=False)
+#     Args:
+#         results (List[Result]): 保存対象のResultオブジェクトのリスト。
+#         path (Path): 保存先JSONファイルへのパス。
+#     """
+#     # 保存先ディレクトリを作成
+#     path.parent.mkdir(parents=True, exist_ok=True)
+#     # 辞書形式に変換してJSONを出力
+#     with path.open("w", encoding="utf-8") as f:
+#         json.dump([r.to_dict() for r in results], f, indent=2, ensure_ascii=False)

@@ -121,7 +121,7 @@ def load_model(use_cpu: bool) -> Tuple[torch.device, SegformerImageProcessor, Au
 
 
 def run_batch_segmentation(
-    img_base64: str
+    img_base64: str,
     processor: SegformerImageProcessor,
     model: AutoModelForSemanticSegmentation,
 ) -> SegmentationResult:
