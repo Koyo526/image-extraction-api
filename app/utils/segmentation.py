@@ -166,6 +166,7 @@ def run_batch_segmentation(
     tops_alpha = create_binary_mask(mask, TOP_IDS)
     tops_detected = bool(tops_alpha.max() > 0)
     # 検出できたなら結果を格納
+    tops_image_url = "https://c.imgz.jp/679/73552679/73552679_21_d_500.jpg"
     if tops_detected:
         tops_img = create_png_with_alpha(img, tops_alpha)
         # TODO: S3へ画像をアップロードし、トップス画像のURLを生成する。tops_image_url へURLを格納する。
@@ -177,6 +178,7 @@ def run_batch_segmentation(
     # [bottoms]
     bottoms_alpha = create_binary_mask(mask, BOTTOM_IDS)
     bottoms_detected = bool(bottoms_alpha.max() > 0)
+    bottoms_image_url = "https://c.imgz.jp/311/93793311/93793311_16_d_500.jpg"
     if bottoms_detected:
         bottoms_img = create_png_with_alpha(img, bottoms_alpha)
         # TODO: S3へ画像をアップロードし、ボトムス画像のURLを生成する。bottoms_image_url へURLを格納する。
