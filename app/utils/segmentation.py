@@ -127,7 +127,6 @@ def run_batch_segmentation(
     items: List[Item],
     processor: SegformerImageProcessor,
     model: AutoModelForSemanticSegmentation,
-    out_dir: Path
 ) -> List[Result]:
     """
     画像リストに対してトップスとボトムスのセグメンテーションを一括実行し、結果を返す。
@@ -136,12 +135,10 @@ def run_batch_segmentation(
         items (List[Item]): セグメンテーション対象のアイテムリスト。
         processor (SegformerImageProcessor): 前処理プロセッサ。
         model (AutoModelForSemanticSegmentation): セグメンテーション用モデル。
-        out_dir (Path): 出力画像を保存するディレクトリ。
 
     Returns:
         List[Result]: セグメンテーション結果を格納した Result オブジェクトのリスト。
     """
-    out_dir.mkdir(parents=True, exist_ok=True)
     results: List[Result] = []
 
     for item in items:
@@ -169,18 +166,12 @@ def run_batch_segmentation(
         mask = seg.argmax(dim=1)[0].cpu().numpy()
 
         parts: Dict[str, PartResult] = {}
-        # 各パートごとにマスクを生成し、検出有無と保存パスを設定
+        # 各パートごとにマスクを生成し、検出有無を判定
         for part_name, ids in [("tops", TOP_IDS), ("bottoms", BOTTOM_IDS)]:
             alpha = create_binary_mask(mask, ids)
             detected = bool(alpha.max() > 0)
-            output_path: str | None = None
 
-            if detected:
-                save_path = out_dir / f"{item.img_path.stem}_{part_name}.png"
-                save_png_with_alpha(img, alpha, save_path)
-                output_path = str(save_path)
-
-            parts[part_name] = PartResult(detected=detected, output_path=output_path)
+            parts[part_name] = PartResult(detected=detected)
 
         # ステータス判定と結果オブジェクト生成
         status = "success" if any(p.detected for p in parts.values()) else "skipped"

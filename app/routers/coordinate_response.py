@@ -9,6 +9,7 @@ import requests
 from utils.openai_client import client, GPT_MODEL
 
 
+# Openapi の API に対するリクエストとレスポンスの定義
 class ImageRequest(BaseModel):
     image_base64: str
     outing_purpose_id: int   # 0:職場, 1:デート, 2:買い物, 3:大学, 4:カフェ, 5:飲み会（同性のみ）, 6:飲み会, 7:運動, 9:特になし

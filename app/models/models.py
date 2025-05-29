@@ -21,10 +21,8 @@ class PartResult:
 
     Attributes:
         detected (bool): パーツが検出されたかどうか。
-        output_path (Optional[str]): 検出されたパーツの透過PNGファイルパス。未検出の場合は None。
     """
     detected: bool
-    output_path: Optional[str]
 
 @dataclass
 class Result:
