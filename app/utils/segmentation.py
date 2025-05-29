@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from PIL import Image
 from transformers import AutoModelForSemanticSegmentation, SegformerImageProcessor
 
-from utils.models import Item, Result, PartResult
+from utils.models import SegmentationResult
 
 # 定数: セグメンテーション対象のラベルID
 TOP_IDS: List[int] = [4, 7]
