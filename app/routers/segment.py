@@ -6,7 +6,7 @@ import logging
 
 from utils.segmentation import load_model, run_batch_segmentation
 from utils.file_io import save_results
-from models.models import Item, Result
+from utils.models import Item, Result
 
 # アプリ起動時にモデルをロード
 device, processor, model = load_model(use_cpu=False)
