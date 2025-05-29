@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 from typing import List
 
-from models.models import Item, Result
+from utils.models import Item, Result
 
 
 def load_items(path: Path) -> List[Item]:
