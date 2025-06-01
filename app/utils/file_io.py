@@ -1,9 +1,13 @@
 from pathlib import Path
 import json
 from typing import List
-
+import boto3
+import uuid
+import os
 # from utils.models import Item, Result
 from utils.models import Item
+
+
 
 
 def load_items(path: Path) -> List[Item]:

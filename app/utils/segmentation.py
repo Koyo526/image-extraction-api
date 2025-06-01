@@ -2,7 +2,7 @@ import time
 from typing import List, Tuple, Dict
 import base64
 import io
-
+from starlette.datastructures import UploadFile 
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -10,6 +10,9 @@ from PIL import Image
 from transformers import AutoModelForSemanticSegmentation, SegformerImageProcessor
 
 from utils.models import SegmentationResult
+from services.upload_service import upload_to_s3
+from datetime import datetime, timezone, timedelta
+import tempfile
 
 # 定数: セグメンテーション対象のラベルID
 TOP_IDS: List[int] = [4, 7]
@@ -120,10 +123,18 @@ def load_model(use_cpu: bool) -> Tuple[torch.device, SegformerImageProcessor, Au
     return device, processor, model
 
 
+def bytesio_to_uploadfile(file_obj: io.BytesIO, filename: str) -> UploadFile:
+    file_obj.seek(0)
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.write(file_obj.read())
+    temp.seek(0)
+    return UploadFile(filename=filename, file=temp)
+
 def run_batch_segmentation(
     img_base64: str,
     processor: SegformerImageProcessor,
     model: AutoModelForSemanticSegmentation,
+    user_token: str
 ) -> SegmentationResult:
     """
     画像リストに対してトップスとボトムスのセグメンテーションを一括実行し、結果を返す。
@@ -165,13 +176,16 @@ def run_batch_segmentation(
     # [tops]
     tops_alpha = create_binary_mask(mask, TOP_IDS)
     tops_detected = bool(tops_alpha.max() > 0)
+    timestamp = datetime.now(timezone(timedelta(hours=9))).strftime('%Y%m%d%H%M%S')
     # 検出できたなら結果を格納
     tops_image_url = "https://c.imgz.jp/679/73552679/73552679_21_d_500.jpg"
     if tops_detected:
         tops_img = create_png_with_alpha(img, tops_alpha)
-        # TODO: S3へ画像をアップロードし、トップス画像のURLを生成する。tops_image_url へURLを格納する。
-        # 例: tops_image_url = upload_to_s3(tops_img, filename="tops.png")
-    # 検出に失敗したならNoneを格納
+        buffer = io.BytesIO()
+        tops_img.save(buffer, format="PNG")
+        filename = f"output/{user_token}-{timestamp}-tops.png"
+        upload_tops_file = bytesio_to_uploadfile(buffer, filename)
+        tops_image_url = upload_to_s3(upload_tops_file, filename)
     else:
         tops_image_url = None
 
@@ -181,17 +195,21 @@ def run_batch_segmentation(
     bottoms_image_url = "https://c.imgz.jp/311/93793311/93793311_16_d_500.jpg"
     if bottoms_detected:
         bottoms_img = create_png_with_alpha(img, bottoms_alpha)
-        # TODO: S3へ画像をアップロードし、ボトムス画像のURLを生成する。bottoms_image_url へURLを格納する。
-        # 例: bottoms_image_url = upload_to_s3(bottoms_img, filename="tops.png")
+        buffer = io.BytesIO()
+        bottoms_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        filename = f"output/{user_token}-{timestamp}-bottoms.png"
+        upload_bottoms_file = bytesio_to_uploadfile(buffer, filename)
+        bottoms_image_url = upload_to_s3(upload_bottoms_file, filename)
     else:
         bottoms_image_url = None
 
     runtime_sec = round(time.time() - start_time, 3)
 
     segmentationResult = SegmentationResult(
-        tops_image_url = tops_image_url,
-        bottoms_image_url = bottoms_image_url,
-        runtime_sec = runtime_sec
+        tops_img_url=tops_image_url,
+        bottoms_img_url=bottoms_image_url,
+        runtime_sec=runtime_sec
     )
 
     return segmentationResult
