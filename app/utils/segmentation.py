@@ -10,6 +10,8 @@ from PIL import Image
 from transformers import AutoModelForSemanticSegmentation, SegformerImageProcessor
 
 from utils.models import SegmentationResult
+from services.upload_service import upload_to_s3
+from datetime import datetime, timezone, timedelta
 
 # 定数: セグメンテーション対象のラベルID
 TOP_IDS: List[int] = [4, 7]
@@ -124,6 +126,7 @@ def run_batch_segmentation(
     img_base64: str,
     processor: SegformerImageProcessor,
     model: AutoModelForSemanticSegmentation,
+    user_token: str
 ) -> SegmentationResult:
     """
     画像リストに対してトップスとボトムスのセグメンテーションを一括実行し、結果を返す。
@@ -165,13 +168,12 @@ def run_batch_segmentation(
     # [tops]
     tops_alpha = create_binary_mask(mask, TOP_IDS)
     tops_detected = bool(tops_alpha.max() > 0)
+    timestamp = datetime.now(timezone(timedelta(hours=9))).strftime('%Y%m%d%H%M%S')
     # 検出できたなら結果を格納
     tops_image_url = "https://c.imgz.jp/679/73552679/73552679_21_d_500.jpg"
     if tops_detected:
         tops_img = create_png_with_alpha(img, tops_alpha)
-        # TODO: S3へ画像をアップロードし、トップス画像のURLを生成する。tops_image_url へURLを格納する。
-        # 例: tops_image_url = upload_to_s3(tops_img, filename="tops.png")
-    # 検出に失敗したならNoneを格納
+        tops_image_url = upload_to_s3(tops_img, filename=f"output/{user_token}-{timestamp}-tops.png")
     else:
         tops_image_url = None
 
@@ -181,8 +183,7 @@ def run_batch_segmentation(
     bottoms_image_url = "https://c.imgz.jp/311/93793311/93793311_16_d_500.jpg"
     if bottoms_detected:
         bottoms_img = create_png_with_alpha(img, bottoms_alpha)
-        # TODO: S3へ画像をアップロードし、ボトムス画像のURLを生成する。bottoms_image_url へURLを格納する。
-        # 例: bottoms_image_url = upload_to_s3(bottoms_img, filename="tops.png")
+        bottoms_image_url = upload_to_s3(bottoms_img, filename=f"output/{user_token}-{timestamp}-bottoms.png")
     else:
         bottoms_image_url = None
 

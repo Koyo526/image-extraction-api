@@ -7,7 +7,8 @@ from routers import (
     coordinate_response,
     segment,
     search_my_fashion_api,
-    upload
+    upload,
+    fashion_review
 )
 from routers.search_my_fashion_api import load_dataset_and_embeddings  # あなたの実装に合わせて変更
 
@@ -21,6 +22,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+API_VERSION = "v1"
+
 # router登録
 
 @app.get("/")
@@ -31,10 +34,11 @@ def root():
 def health_check():
     return {"status": "healthy"}
 
-app.include_router(upload.router, tags=["upload"])
-app.include_router(check_gpt.router, tags=["gpt"])
-app.include_router(check_vision_gpt.router, tags=["vision"])
-app.include_router(coordinate_response.router, tags=["coordinate"])
-app.include_router(segment.router, tags=["segment"])
-app.include_router(search_my_fashion_api.router, tags=["search-my-fashion-api"])
+app.include_router(upload.router, prefix=f"/{API_VERSION}", tags=["upload"])
+app.include_router(check_gpt.router, prefix=f"/{API_VERSION}", tags=["gpt"])
+app.include_router(check_vision_gpt.router, prefix=f"/{API_VERSION}", tags=["vision"])
+app.include_router(coordinate_response.router, prefix=f"/{API_VERSION}", tags=["coordinate"])
+app.include_router(segment.router, prefix=f"/{API_VERSION}", tags=["segment"])
+app.include_router(search_my_fashion_api.router, prefix=f"/{API_VERSION}", tags=["search-my-fashion-api"])
+app.include_router(fashion_review.router, prefix=f"/{API_VERSION}", tags=["fashion-review"])
 

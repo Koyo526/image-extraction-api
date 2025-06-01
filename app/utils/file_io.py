@@ -1,9 +1,44 @@
 from pathlib import Path
 import json
 from typing import List
-
+import boto3
+import uuid
+import os
+from datetime import timedelta
 # from utils.models import Item, Result
 from utils.models import Item
+
+
+
+
+s3 = boto3.client(
+    "s3",
+    region_name="ap-northeast-1",
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+)
+
+BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+
+def upload_image_and_get_presigned_url(image_bytes: bytes, folder: str, expires_minutes: int = 60) -> str:
+    key = f"{folder}/{uuid.uuid4()}.jpg"
+
+    # S3にアップロード（バケットは非公開のまま）
+    s3.put_object(
+        Bucket=BUCKET_NAME,
+        Key=key,
+        Body=image_bytes,
+        ContentType="image/jpeg"
+    )
+
+    # presigned URL を生成
+    presigned_url = s3.generate_presigned_url(
+        ClientMethod="get_object",
+        Params={"Bucket": BUCKET_NAME, "Key": key},
+        ExpiresIn=timedelta(minutes=expires_minutes).total_seconds()
+    )
+
+    return presigned_url
 
 
 def load_items(path: Path) -> List[Item]:
