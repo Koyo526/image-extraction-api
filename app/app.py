@@ -34,11 +34,12 @@ def root():
 def health_check():
     return {"status": "healthy"}
 
-app.include_router(upload.router, prefix=f"/{API_VERSION}", tags=["upload"])
-app.include_router(check_gpt.router, prefix=f"/{API_VERSION}", tags=["gpt"])
-app.include_router(check_vision_gpt.router, prefix=f"/{API_VERSION}", tags=["vision"])
-app.include_router(coordinate_response.router, prefix=f"/{API_VERSION}", tags=["coordinate"])
-app.include_router(segment.router, prefix=f"/{API_VERSION}", tags=["segment"])
-app.include_router(search_my_fashion_api.router, prefix=f"/{API_VERSION}", tags=["search-my-fashion-api"])
 app.include_router(fashion_review.router, prefix=f"/{API_VERSION}", tags=["fashion-review"])
+app.include_router(upload.router, prefix=f"/{API_VERSION}", tags=["others"])
+app.include_router(check_gpt.router, prefix=f"/{API_VERSION}", tags=["others"])
+app.include_router(check_vision_gpt.router, prefix=f"/{API_VERSION}", tags=["others"])
+app.include_router(coordinate_response.router, prefix=f"/{API_VERSION}", tags=["others"])
+app.include_router(segment.router, prefix=f"/{API_VERSION}", tags=["others"])
+app.include_router(search_my_fashion_api.router, prefix=f"/{API_VERSION}", tags=["others"])
+
 
