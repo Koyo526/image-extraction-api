@@ -54,3 +54,5 @@ class SimilarWearItem(BaseModel):
 class PredictResponse(BaseModel):
     graph_image: str
     similar_wear: List[SimilarWearItem]
+
+

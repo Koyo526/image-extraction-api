@@ -173,7 +173,10 @@ def run_batch_segmentation(
     tops_image_url = "https://c.imgz.jp/679/73552679/73552679_21_d_500.jpg"
     if tops_detected:
         tops_img = create_png_with_alpha(img, tops_alpha)
-        tops_image_url = upload_to_s3(tops_img, filename=f"output/{user_token}-{timestamp}-tops.png")
+        buffer = io.BytesIO()
+        tops_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        tops_image_url = upload_to_s3(buffer, filename=f"output/{user_token}-{timestamp}-tops.png")
     else:
         tops_image_url = None
 
@@ -183,7 +186,10 @@ def run_batch_segmentation(
     bottoms_image_url = "https://c.imgz.jp/311/93793311/93793311_16_d_500.jpg"
     if bottoms_detected:
         bottoms_img = create_png_with_alpha(img, bottoms_alpha)
-        bottoms_image_url = upload_to_s3(bottoms_img, filename=f"output/{user_token}-{timestamp}-bottoms.png")
+        buffer = io.BytesIO()
+        bottoms_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        bottoms_image_url = upload_to_s3(buffer, filename=f"output/{user_token}-{timestamp}-bottoms.png")
     else:
         bottoms_image_url = None
 

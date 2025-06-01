@@ -18,9 +18,6 @@ def upload_to_s3(file: UploadFile, fileName: str) -> str:
     if ext not in ["jpg", "jpeg", "png"]:
         raise ValueError("Unsupported file type")
 
-    # ユーザーIDとタイムスタンプを元にファイル名を生成
-    timestamp = datetime.now(timezone(timedelta(hours=9))).strftime('%Y%m%d%H%M%S')
-
     # S3アップロード
     s3.upload_fileobj(
         Fileobj=file.file,

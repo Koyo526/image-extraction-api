@@ -5,7 +5,8 @@ from datetime import datetime, timezone, timedelta
 from services import  search_fashion_items, review_coordinate
 from services.upload_service import upload_to_s3
 from services.segment_image import segment_image
-
+import requests
+from io import BytesIO
 from schemas.review import ReviewResponse,ImageRequest,QueryInput
 
 router = APIRouter()
@@ -24,19 +25,28 @@ def fashion_review(
         fileName = f"input/{user_token}-{timestamp}.jpg"
         original_url = upload_to_s3(image, fileName)
 
+        response = requests.get(original_url)
+        if response.status_code != 200:
+            raise Exception("画像のダウンロードに失敗しました")
+        
+        image_data = BytesIO(response.content)
+
+        image_base64 = image_data.getvalue().decode('utf-8')
+
         # 2. セグメンテーション実行（ローカルファイル or URLで呼ぶ）
-        segment_result = segment_image(original_url, user_token)
+        segment_result = segment_image(image_base64, user_token)
 
         # 3. コーディネートレビュー
+        # imageをbase64に変換
         image_request = ImageRequest(
-            image_base64=original_url,
+            image_base64=image_base64,
             outing_purpose_id=outing_purpose_id
         )
         coordinate_result = review_coordinate(image_request)
 
         # 4. 類似アイテム検索
         queryInput = QueryInput(
-            image_base64=original_url,
+            image_base64=image_base64,
             query_width=query_width,
             query_height=query_height
         )
