@@ -19,6 +19,17 @@ def review_coordinate(request: ImageRequest) -> CoordinateResponse:
     ・基本的にはポジティブな印象を与え、coordinate_reviewの最後はワンポイントアドバイスをお願いします。
     ・出力形式は必ず守ってください。
     ・出力に <> は含めないでください
+    以下のフォーマットでJSONとして出力してください：
+    {
+    "coordinate_review": "...",
+    "coordinate_item01": "...",
+    "recommend_item01": "...",
+    "coordinate_item02": "...",
+    "recommend_item02": "...",
+    "coordinate_item03": "...",
+    "recommend_item03": "...",
+    }
+    ※文章のみで返答せず、必ず上記のJSONフォーマットで返してください。
     """
 
     if request.outing_purpose_id == 0:
@@ -65,14 +76,14 @@ def review_coordinate(request: ImageRequest) -> CoordinateResponse:
                 ]
             }
         ],
-        response_format = {"type": "json_object"},
         max_tokens = 2048,
     )
     print(response.choices[0].message.content)
 
     openAIResponse = response.choices[0].message.content
     openAIResponseJSON = json.loads(openAIResponse)
-    imageResponse = ImageResponse(**openAIResponseJSON)
+    imageResponse = ImageResponse(**openAIResponseJSON,gender=gender)
+    
     # gender が men or women 出ない場合は men にする
     if imageResponse.gender == "men" or imageResponse.gender == "women":
         imageResponse.gender = "men"

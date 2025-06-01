@@ -4,7 +4,6 @@ from typing import List
 import boto3
 import uuid
 import os
-from datetime import timedelta
 # from utils.models import Item, Result
 from utils.models import Item
 

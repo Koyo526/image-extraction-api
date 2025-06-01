@@ -10,7 +10,7 @@ from routers import (
     upload,
     fashion_review
 )
-from routers.search_my_fashion_api import load_dataset_and_embeddings  # あなたの実装に合わせて変更
+from services.search_fashion_items import load_dataset_and_embeddings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

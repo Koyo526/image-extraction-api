@@ -1,29 +1,33 @@
 import boto3
 from fastapi import UploadFile
-from datetime import datetime, timezone, timedelta
 from pytz import timezone
 import os
 
-# 設定（実際は環境変数やconfigファイルから読み込むことを推奨）
 AWS_REGION = os.getenv("AWS_REGION", "ap-northeast-1") 
 BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "irodori-s3")
 # boto3クライアント生成
-s3 = boto3.client("s3", region_name=AWS_REGION)
+s3 = boto3.client("s3", 
+                region_name=AWS_REGION,
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"))
 
 def upload_to_s3(file: UploadFile, fileName: str) -> str:
     """画像ファイルをS3にアップロードし、CloudFront URLを返す"""
 
     # ファイル拡張子取得
-    ext = file.filename.split(".")[-1]
+    ext = file.filename.split(".")[-1].lower()
     if ext not in ["jpg", "jpeg", "png"]:
         raise ValueError("Unsupported file type")
+
+    # ContentType の補完（Noneなら "image/jpeg" を仮定）
+    content_type = file.content_type or "image/jpeg"
 
     # S3アップロード
     s3.upload_fileobj(
         Fileobj=file.file,
         Bucket=BUCKET_NAME,
         Key=fileName,
-        ExtraArgs={"ContentType": file.content_type}
+        ExtraArgs={"ContentType": content_type}
     )
 
     # Presigned URL の生成（1時間有効）

@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import APIRouter, HTTPException
+from fastapi import HTTPException
 from pydantic import BaseModel
 import base64
 import io
@@ -23,14 +23,14 @@ plt.rcParams["font.family"] = "Noto Sans CJK JP"
 import torchvision
 from torchvision import transforms as T
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-from schemas.review import PredictResponse
+from schemas.review import PredictResponse,QueryInput
 
 # -------------------------------
 # グローバル設定・初期化
 # -------------------------------
 DATA_CSV_PATH = "data/merged_fashion.csv"         # CSVファイルのパス
 EMBEDDINGS_DB_PATH = "db/embeddings.db"               # SQLite DBのパス
-SIMILARITY_THRESHOLD = 0.7                         # グラフ作成用の閾値（必要に応じて調整）
+SIMILARITY_THRESHOLD = 0.7                # グラフ作成用の閾値（必要に応じて調整）
 TOP_K = 30                                       # 出力グラフのノード数（上位30件）
 SAMPLE_SIZE = 60
 ICON_ZOOM = 0.06
@@ -126,7 +126,24 @@ def load_dataset_and_embeddings():
     global dataset_image_urls, dataset_ids, dataset_post_urls, dataset_embeddings, prefix_to_color
 
     # CSVから画像URL, ID, 投稿URLを読み込み
-    df = pd.read_csv(DATA_CSV_PATH)
+    try:
+        df = pd.read_csv(DATA_CSV_PATH)
+    except FileNotFoundError:
+        print(f"[ERROR] CSVファイルが見つかりません: {DATA_CSV_PATH}")
+        return
+    except pd.errors.EmptyDataError:
+        print(f"[ERROR] CSVファイルが空です: {DATA_CSV_PATH}")
+        return
+    except Exception as e:
+        print(f"[ERROR] CSVファイルの読み込み中にエラーが発生しました: {e}")
+        return
+
+    # データの存在確認
+    if df.empty:
+        print(f"[WARNING] CSVファイルにはデータがありません: {DATA_CSV_PATH}")
+        return
+    else:
+        print(f"[INFO] CSVファイルの読み込みに成功しました。レコード数: {len(df)}")
     dataset_image_urls = df["image_url"].tolist()
     dataset_ids = df["id"].tolist()
     dataset_post_urls = df["post_url"].tolist()  # 追加：投稿URLの読み込み
@@ -189,20 +206,38 @@ def load_dataset_and_embeddings():
 
 
 
-def search_fashion_items(query, items):
+def search_fashion_items(query:QueryInput) -> PredictResponse:
     # 入力のbase64文字列から画像データに変換
     try:
         image_data = base64.b64decode(query.image_base64)
+        print(f"入力画像のデコードに成功: {len(image_data)} bytes")
         query_image = Image.open(io.BytesIO(image_data)).convert("RGB")
     except Exception as e:
         raise HTTPException(status_code=400, detail="無効なbase64画像データです。")
     
     # クエリ画像のembeddingを計算（人物領域を優先して抽出）
     query_vector = compute_embedding(query_image)
+    print(f"クエリ画像のベクトルサイズ: {query_vector.shape}")
+    if query_vector is None or len(query_vector) == 0:
+        raise HTTPException(status_code=500, detail="クエリ画像のベクトルが生成できませんでした。")
+    # query_vector = np.array(query_vector).reshape(1, -1)
+    
+    # 修正後: 次元をチェックして明示的に2Dへ変換
+    query_vector = np.array(query_vector)
+    if query_vector.ndim == 1:
+        query_vector = query_vector.reshape(1, -1)
+    elif query_vector.ndim == 3:
+        query_vector = query_vector.reshape(query_vector.shape[0], -1)
+    elif query_vector.ndim != 2:
+        raise HTTPException(status_code=500, detail="クエリベクトルの次元が不正です。")
+
+    if not dataset_embeddings:
+        raise HTTPException(status_code=500, detail="データセットの埋め込み情報が空です。")
     
     # クエリ画像とデータセット各画像とのコサイン類似度計算
     dataset_emb_array = np.array(dataset_embeddings)
-    query_similarities = cosine_similarity([query_vector], dataset_emb_array)[0]
+    # query_similarities = cosine_similarity([query_vector], dataset_emb_array)[0]
+    query_similarities = cosine_similarity(query_vector, dataset_emb_array)[0]
     
     # --- ノード選択 ---
     # 類似度が最も高い上位5件のインデックス

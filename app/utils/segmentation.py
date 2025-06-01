@@ -2,7 +2,7 @@ import time
 from typing import List, Tuple, Dict
 import base64
 import io
-
+from starlette.datastructures import UploadFile 
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -12,6 +12,7 @@ from transformers import AutoModelForSemanticSegmentation, SegformerImageProcess
 from utils.models import SegmentationResult
 from services.upload_service import upload_to_s3
 from datetime import datetime, timezone, timedelta
+import tempfile
 
 # 定数: セグメンテーション対象のラベルID
 TOP_IDS: List[int] = [4, 7]
@@ -122,6 +123,13 @@ def load_model(use_cpu: bool) -> Tuple[torch.device, SegformerImageProcessor, Au
     return device, processor, model
 
 
+def bytesio_to_uploadfile(file_obj: io.BytesIO, filename: str) -> UploadFile:
+    file_obj.seek(0)
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.write(file_obj.read())
+    temp.seek(0)
+    return UploadFile(filename=filename, file=temp)
+
 def run_batch_segmentation(
     img_base64: str,
     processor: SegformerImageProcessor,
@@ -175,8 +183,9 @@ def run_batch_segmentation(
         tops_img = create_png_with_alpha(img, tops_alpha)
         buffer = io.BytesIO()
         tops_img.save(buffer, format="PNG")
-        buffer.seek(0)
-        tops_image_url = upload_to_s3(buffer, filename=f"output/{user_token}-{timestamp}-tops.png")
+        filename = f"output/{user_token}-{timestamp}-tops.png"
+        upload_tops_file = bytesio_to_uploadfile(buffer, filename)
+        tops_image_url = upload_to_s3(upload_tops_file, filename)
     else:
         tops_image_url = None
 
@@ -189,16 +198,18 @@ def run_batch_segmentation(
         buffer = io.BytesIO()
         bottoms_img.save(buffer, format="PNG")
         buffer.seek(0)
-        bottoms_image_url = upload_to_s3(buffer, filename=f"output/{user_token}-{timestamp}-bottoms.png")
+        filename = f"output/{user_token}-{timestamp}-bottoms.png"
+        upload_bottoms_file = bytesio_to_uploadfile(buffer, filename)
+        bottoms_image_url = upload_to_s3(upload_bottoms_file, filename)
     else:
         bottoms_image_url = None
 
     runtime_sec = round(time.time() - start_time, 3)
 
     segmentationResult = SegmentationResult(
-        tops_image_url = tops_image_url,
-        bottoms_image_url = bottoms_image_url,
-        runtime_sec = runtime_sec
+        tops_img_url=tops_image_url,
+        bottoms_img_url=bottoms_image_url,
+        runtime_sec=runtime_sec
     )
 
     return segmentationResult

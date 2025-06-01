@@ -2,12 +2,14 @@
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from datetime import datetime, timezone, timedelta
-from services import  search_fashion_items, review_coordinate
 from services.upload_service import upload_to_s3
-from services.segment_image import segment_image
+from services.segment_image import segment_tops_bottoms_images
+from services.review_coordinate import review_coordinate
+from services.search_fashion_items import search_fashion_items
 import requests
 from io import BytesIO
 from schemas.review import ReviewResponse,ImageRequest,QueryInput
+import base64
 
 router = APIRouter()
 
@@ -31,10 +33,10 @@ def fashion_review(
         
         image_data = BytesIO(response.content)
 
-        image_base64 = image_data.getvalue().decode('utf-8')
+        image_base64 = base64.b64encode(image_data.getvalue()).decode('utf-8')
 
         # 2. セグメンテーション実行（ローカルファイル or URLで呼ぶ）
-        segment_result = segment_image(image_base64, user_token)
+        segment_result = segment_tops_bottoms_images(image_base64, user_token)
 
         # 3. コーディネートレビュー
         # imageをbase64に変換
@@ -53,11 +55,13 @@ def fashion_review(
 
         fashion_results = search_fashion_items(queryInput)
 
+        print("=== OpenAI Response Content ===")
+        print(repr(fashion_results))
         # 5. 結果をまとめて返す
         return {
             "createdAt": timestamp,
-            "tops_image_url": segment_result.tops_image_url,
-            "bottoms_image_url": segment_result.bottoms_image_url,
+            "tops_image_url": segment_result.tops_img_url,
+            "bottoms_image_url": segment_result.bottoms_img_url,
             "coordinate": {
                 "coordinate_review": coordinate_result.coordinate_review,
                 "coordinate_item01": coordinate_result.coordinate_item01,
