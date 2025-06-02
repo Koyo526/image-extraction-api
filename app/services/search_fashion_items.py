@@ -387,7 +387,7 @@ def search_fashion_items(query:QueryInput,user_token:str,timestamp:str) -> Predi
         file=io.BytesIO(base64.b64decode(graph_base64))
     )
     
-    filename = f"/{user_token}-{timestamp}-tops.png"
+    filename = f"graph_image/{user_token}-{timestamp}-tops.png"
     original_url = upload_to_s3(graph_file, filename)
 
     similar_wear = []
