@@ -12,8 +12,6 @@ s3 = boto3.client("s3",
                 aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"))
 
 def upload_to_s3(file: UploadFile, fileName: str) -> str:
-    """画像ファイルをS3にアップロードし、CloudFront URLを返す"""
-
     # ファイル拡張子取得
     ext = file.filename.split(".")[-1].lower()
     if ext not in ["jpg", "jpeg", "png"]:
