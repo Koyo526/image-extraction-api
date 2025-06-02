@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import HTTPException
+from fastapi import HTTPException,UploadFile
 from pydantic import BaseModel
 import base64
 import io
@@ -12,6 +12,7 @@ import torch
 from PIL import Image, ImageDraw
 from transformers import CLIPProcessor, CLIPModel
 from sklearn.metrics.pairwise import cosine_similarity
+from services.upload_service import upload_to_s3
 import networkx as nx
 import matplotlib
 matplotlib.use('Agg')  # 非表示バックエンドを指定
@@ -206,7 +207,7 @@ def load_dataset_and_embeddings():
 
 
 
-def search_fashion_items(query:QueryInput) -> PredictResponse:
+def search_fashion_items(query:QueryInput,user_token:str,timestamp:str) -> PredictResponse:
     # 入力のbase64文字列から画像データに変換
     try:
         image_data = base64.b64decode(query.image_base64)
@@ -378,8 +379,17 @@ def search_fashion_items(query:QueryInput) -> PredictResponse:
     plt.close(fig)
     buf.seek(0)
     graph_base64 = base64.b64encode(buf.read()).decode("utf-8")
+
+    # graph_base64をUploadFileに変換
+    graph_file = UploadFile(
+        filename="graph.png",
+        content_type="image/png",
+        file=io.BytesIO(base64.b64decode(graph_base64))
+    )
     
-    # --- similar_wear: 上位5件の類似画像を返す ---
+    filename = f"/{user_token}-{timestamp}-tops.png"
+    original_url = upload_to_s3(graph_file, filename)
+
     similar_wear = []
     for idx in top_5:
         username = dataset_ids[idx].split("_")[0]
@@ -401,4 +411,4 @@ def search_fashion_items(query:QueryInput) -> PredictResponse:
             "post_url": post_url  # 追加：投稿URLを出力データに含める
         })
     
-    return PredictResponse(graph_image=graph_base64, similar_wear=similar_wear)
+    return PredictResponse(graph_image=original_url, similar_wear=similar_wear)
