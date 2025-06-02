@@ -17,9 +17,9 @@ class SegmentRequest(BaseModel):
 
 
 
-def segment_tops_bottoms_images(image_base64: str, user_token: str) -> SegmentationResult:
+def segment_tops_bottoms_images(image_base64: str, user_token: str, timestamp: str) -> SegmentationResult:
 
     # セグメンテーションモデルで画像を分割（ファイル名は仮）
-    segment_result = run_batch_segmentation(image_base64, processor, model, user_token=user_token)
+    segment_result = run_batch_segmentation(image_base64, processor, model, user_token, timestamp)
 
     return segment_result

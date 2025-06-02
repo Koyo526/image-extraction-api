@@ -134,7 +134,8 @@ def run_batch_segmentation(
     img_base64: str,
     processor: SegformerImageProcessor,
     model: AutoModelForSemanticSegmentation,
-    user_token: str
+    user_token: str,
+    timestamp: str
 ) -> SegmentationResult:
     """
     画像リストに対してトップスとボトムスのセグメンテーションを一括実行し、結果を返す。
@@ -176,7 +177,6 @@ def run_batch_segmentation(
     # [tops]
     tops_alpha = create_binary_mask(mask, TOP_IDS)
     tops_detected = bool(tops_alpha.max() > 0)
-    timestamp = datetime.now(timezone(timedelta(hours=9))).strftime('%Y%m%d%H%M%S')
     # 検出できたなら結果を格納
     tops_image_url = "https://c.imgz.jp/679/73552679/73552679_21_d_500.jpg"
     if tops_detected:

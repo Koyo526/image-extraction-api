@@ -374,18 +374,8 @@ def predict(query: QueryInput):
         username = dataset_ids[idx].split("_")[0]
         image_url = dataset_image_urls[idx]
         post_url = dataset_post_urls[idx]  # 追加：投稿URLを取得
-        try:
-            response = requests.get(image_url, stream=True, timeout=10)
-            sim_image = Image.open(response.raw).convert("RGB")
-            buf_sim = io.BytesIO()
-            sim_image.save(buf_sim, format="PNG")
-            buf_sim.seek(0)
-            image_sim_base64 = base64.b64encode(buf_sim.read()).decode("utf-8")
-        except Exception as e:
-            image_sim_base64 = ""
         similar_wear.append({
             "username": username,
-            "image_base64": image_sim_base64,
             "image_url": image_url,
             "post_url": post_url  # 追加：投稿URLを出力データに含める
         })

@@ -36,7 +36,7 @@ def fashion_review(
         image_base64 = base64.b64encode(image_data.getvalue()).decode('utf-8')
 
         # 2. セグメンテーション実行（ローカルファイル or URLで呼ぶ）
-        segment_result = segment_tops_bottoms_images(image_base64, user_token)
+        segment_result = segment_tops_bottoms_images(image_base64, user_token,timestamp)
 
         # 3. コーディネートレビュー
         # imageをbase64に変換
@@ -53,7 +53,7 @@ def fashion_review(
             query_height=query_height
         )
 
-        fashion_results = search_fashion_items(queryInput)
+        fashion_results = search_fashion_items(queryInput, user_token,timestamp)
 
         print("=== OpenAI Response Content ===")
         print(repr(fashion_results))
