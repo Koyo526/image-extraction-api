@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Dict
+import io
 
 @dataclass
 class Item:
@@ -50,3 +51,9 @@ class SegmentationResult:
             "parts": {k: v.__dict__ for k, v in self.parts.items()},
             "runtime_sec": self.runtime_sec,
         }
+
+
+class SimpleUploadFile:
+    def __init__(self, filename: str, file: io.BytesIO):
+        self.filename = filename
+        self.file = file

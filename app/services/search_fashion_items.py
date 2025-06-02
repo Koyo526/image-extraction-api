@@ -13,12 +13,15 @@ from PIL import Image, ImageDraw
 from transformers import CLIPProcessor, CLIPModel
 from sklearn.metrics.pairwise import cosine_similarity
 from services.upload_service import upload_to_s3
+from utils.models import SimpleUploadFile
 import networkx as nx
+import io
 import matplotlib
 matplotlib.use('Agg')  # 非表示バックエンドを指定
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 plt.rcParams["font.family"] = "Noto Sans CJK JP"
+from types import SimpleNamespace
 
 # 追加: torchvisionを用いた人物検出用モジュール
 import torchvision
@@ -380,14 +383,16 @@ def search_fashion_items(query:QueryInput,user_token:str,timestamp:str) -> Predi
     buf.seek(0)
     graph_base64 = base64.b64encode(buf.read()).decode("utf-8")
 
-    # graph_base64をUploadFileに変換
-    graph_file = UploadFile(
+    file_like = io.BytesIO(base64.b64decode(graph_base64))
+    file_like.name = "graph.png"
+
+    graph_file = SimpleNamespace(
         filename="graph.png",
-        content_type="image/png",
-        file=io.BytesIO(base64.b64decode(graph_base64))
+        file=file_like,
+        content_type="image/png"
     )
-    
-    filename = f"graph_image/{user_token}-{timestamp}-tops.png"
+
+    filename = f"graph_image/{user_token}-{timestamp}-graph.png"
     original_url = upload_to_s3(graph_file, filename)
 
     similar_wear = []

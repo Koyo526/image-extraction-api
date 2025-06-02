@@ -47,7 +47,6 @@ class QueryInput(BaseModel):
 
 class SimilarWearItem(BaseModel):
     username: str
-    image_base64: str
     post_url: str   # 追加：投稿へのURLを含める
     image_url: str
 
