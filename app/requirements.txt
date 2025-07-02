@@ -6,7 +6,6 @@ Pillow
 boto3
 requests       
 python-multipart 
-openai
 pydantic
 scikit-learn
 torchvision

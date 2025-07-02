@@ -5,18 +5,13 @@ import base64
 import json
 import urllib
 
-from utils.openai_client import client, GPT_MODEL
+from utils.bedrock_client import invoke_nova_lite_text
 
 
 router = APIRouter()
 
 @router.get("/check-gpt")
 async def checkGPT():
-    completion = client.chat.completions.create(
-        model = GPT_MODEL,
-        messages=[{
-            "role": "user",
-            "content": "Write a one-sentence bedtime story about a unicorn."
-        }]
-    )
-    return {"result": completion.choices[0].message.content}
+    prompt = "Write a one-sentence bedtime story about a unicorn."
+    result = invoke_nova_lite_text(prompt)
+    return {"result": result}
