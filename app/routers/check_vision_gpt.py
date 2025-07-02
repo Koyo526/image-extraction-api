@@ -6,7 +6,7 @@ import json
 import urllib
 import requests
 
-from utils.openai_client import client, GPT_MODEL
+from utils.bedrock_client import invoke_nova_lite_vision
 
 
 router = APIRouter()
@@ -37,22 +37,5 @@ def checkVisionGPT():
     <コーディネートタイプ診断>\n
     <あなたに似合うコーディネートタイプは>\n
     """
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{encodedImage}"
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens=300,
-    )
-    return {"result": response.choices[0].message.content}
+    result = invoke_nova_lite_vision(prompt, encodedImage, max_tokens=300)
+    return {"result": result}

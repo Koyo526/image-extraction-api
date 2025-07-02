@@ -4,7 +4,7 @@ import json
 import urllib
 from schemas.review import ImageRequest, CoordinateResponse, ImageResponse,CoordinateResponse
 
-from utils.openai_client import client, GPT_MODEL
+from utils.bedrock_client import invoke_nova_lite_vision
 
 def review_coordinate(request: ImageRequest) -> CoordinateResponse:
     gender = "men"   # TODO: 動的化
@@ -54,34 +54,31 @@ def review_coordinate(request: ImageRequest) -> CoordinateResponse:
         prompt_filename = "nothing.txt"
 
     with open(f"prompt/{prompt_filename}", "r", encoding="utf-8") as file:
-        prompt = file.read()
+        prompt_content = file.read()
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt,
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{request.image_base64}"
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens = 2048,
-    )
-    print(response.choices[0].message.content)
+    # システムプロンプトとユーザープロンプトを結合
+    full_prompt = f"{system_prompt}\n\n{prompt_content}"
 
-    openAIResponse = response.choices[0].message.content
-    openAIResponseJSON = json.loads(openAIResponse)
+    # Nova Liteで画像解析を実行
+    response_content = invoke_nova_lite_vision(full_prompt, request.image_base64, max_tokens=2048)
+    print(response_content)
+
+    # JSONレスポンスをパース
+    try:
+        openAIResponseJSON = json.loads(response_content)
+    except json.JSONDecodeError:
+        # JSONパースに失敗した場合のフォールバック
+        print("Failed to parse JSON response, using fallback")
+        openAIResponseJSON = {
+            "coordinate_review": response_content,
+            "coordinate_item01": "トップス",
+            "recommend_item01": "シンプルなシャツ",
+            "coordinate_item02": "ボトムス",
+            "recommend_item02": "デニムパンツ",
+            "coordinate_item03": "アクセサリー",
+            "recommend_item03": "腕時計"
+        }
+    
     imageResponse = ImageResponse(**openAIResponseJSON,gender=gender)
     
     # gender が men or women 出ない場合は men にする
